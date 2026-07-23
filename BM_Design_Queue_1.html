@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design Queue — Banana Moon</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231D9E75'/%3E%3Ctext x='32' y='42' font-family='-apple-system, BlinkMacSystemFont, Segoe UI, Arial, sans-serif' font-size='24' font-weight='700' fill='%23ffffff' text-anchor='middle'%3EDQ%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F7F6F3;
+  --surface:#FFFFFF;
+  --border:#E4E2DC;
+  --border-strong:#C8C5BC;
+  --text:#1A1917;
+  --text-muted:#6B6860;
+  --text-faint:#9B9890;
+  --green:#1D9E75;
+  --green-light:#E1F5EE;
+  --green-dark:#085041;
+  --red:#A32D2D;
+  --red-light:#FCEBEB;
+  --amber:#854F0B;
+  --amber-light:#FAEEDA;
+  --purple:#3C3489;
+  --purple-light:#EEEDFE;
+  --radius:10px;
+  --radius-sm:6px;
+}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.5;min-height:100vh}
+
+/* Layout */
+.shell{max-width:960px;margin:0 auto;padding:20px 16px}
+
+/* Topbar */
+.topbar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-mark{width:32px;height:32px;background:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.brand-mark i{color:#fff;font-size:18px}
+.brand-text{font-size:15px;font-weight:600;letter-spacing:-0.01em}
+.brand-sub{font-size:11px;color:var(--text-muted);margin-top:-1px}
+.sync-badge{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted);background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:3px 10px}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
+.sdot.busy{background:#EF9F27;animation:blink 0.7s infinite}
+.sdot.err{background:#E24B4A}
+.sdot.warn{background:#EF9F27}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.topbar-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+select.who{font-size:12px;padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:12px;font-weight:500;color:var(--text);font-family:inherit;white-space:nowrap;transition:background 0.1s}
+.btn:hover{background:var(--bg)}
+.btn-primary{background:var(--green);border-color:var(--green);color:#fff}
+.btn-primary:hover{background:#0F6E56}
+.btn-icon{padding:7px 9px}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.stat-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);margin-bottom:4px}
+.stat-val{font-size:28px;font-weight:600;line-height:1;letter-spacing:-0.02em}
+
+/* Toolbar */
+.toolbar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.toolbar input[type=text]{font-size:13px;padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);color:var(--text);flex:1;min-width:150px;font-family:inherit}
+.toolbar input[type=text]:focus{outline:none;border-color:var(--green);background:var(--surface)}
+.toolbar select{font-size:12px;padding:6px 9px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit}
+.chk{font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap}
+.vtabs{display:flex;gap:4px;margin-left:auto}
+.vtab{font-size:12px;font-weight:500;padding:5px 13px;border-radius:var(--radius-sm);border:1px solid transparent;cursor:pointer;color:var(--text-muted)}
+.vtab.on{background:var(--bg);border-color:var(--border);color:var(--text)}
+.vtab:hover:not(.on){color:var(--text)}
+
+/* Lanes */
+.lane{margin-bottom:20px}
+.lane-hdr{display:flex;align-items:center;gap:9px;margin-bottom:10px;cursor:pointer;user-select:none;padding:0 2px}
+.lane-pip{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.lane-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em}
+.lane-count{font-size:12px;color:var(--text-muted)}
+.lane-rule{flex:1;height:1px;background:var(--border);margin-left:4px}
+.lane-tog{font-size:11px;color:var(--text-faint)}
+
+/* Job cards */
+.job-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:7px;display:grid;grid-template-columns:6px 1fr auto;overflow:hidden;transition:border-color 0.12s,box-shadow 0.12s}
+.job-card:hover{border-color:var(--border-strong)}
+.job-card.is-ft3{border-color:#F0997B}
+.job-card.is-ft5{border-color:#FAC775}
+.job-card.is-ftm{border-color:#9FE1CB}
+.job-card.is-nf{border-color:#F7C1C1}
+.job-card.is-new{background:#EEF4FD;border-color:#92BAF0}
+.job-card.is-new .job-accent{opacity:0.7}
+.pill-new{background:#D0E4FA;color:#0C447C}
+.job-accent{width:6px}
+.job-body{padding:13px 16px;min-width:0}
+.job-r1{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:6px}
+.job-code{font-size:14px;font-weight:600;letter-spacing:-0.01em;white-space:nowrap}
+.job-cust{font-size:14px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+.pill{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.pill i{font-size:10px}
+.pill-ft3{background:#F5C4B3;color:#712B13}
+.pill-ft5{background:#FAC775;color:#633806}
+.pill-ftm{background:#9FE1CB;color:var(--green-dark)}
+.pill-nf{background:#F7C1C1;color:#791F1F}
+.pill-rep{background:#FAC775;color:#412402}
+.pill-out{background:var(--purple-light);color:var(--purple)}
+.pill-proc{font-size:11px;padding:2px 7px;border-radius:4px;font-weight:600}
+.pill-screen{background:#E6F1FB;color:#0C447C}
+.pill-emb{background:#EEEDFE;color:#3C3489}
+.pill-dtf{background:#FAEEDA;color:#633806}
+.pill-dtg{background:#FAECE7;color:#712B13}
+.job-r2{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.meta{font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:4px}
+.prod-time{background:#F1EFE8;color:#444441;padding:1px 7px;border-radius:4px;font-weight:600;font-size:11px;gap:3px}
+.dval{font-size:13px;font-weight:600}
+.dval.overdue{color:var(--red)}
+.dval.today{color:var(--amber)}
+.dval.soon{color:var(--green)}
+.job-note-display{font-size:12px;color:var(--text-muted);font-style:italic;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+
+/* Job controls panel */
+.job-ctrl{padding:13px 14px;display:flex;flex-direction:column;gap:7px;border-left:1px solid var(--border);min-width:175px;justify-content:space-between}
+select.ssel{font-size:12px;padding:5px 7px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);width:100%;font-family:inherit}
+select.ssel:focus{outline:none;border-color:var(--green)}
+input.ninp{font-size:12px;padding:5px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);color:var(--text);width:100%;font-family:inherit}
+input.ninp:focus{outline:none;border-color:var(--green);background:var(--surface)}
+.cbtns{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.cbtn{font-size:11px;font-weight:500;padding:4px 9px;border-radius:var(--radius-sm);border:1px solid var(--border);background:transparent;cursor:pointer;color:var(--text-muted);font-family:inherit;transition:background 0.1s}
+.cbtn:hover{background:var(--bg)}
+.cbtn.on-rep{border-color:#FAC775;color:#412402;background:var(--amber-light)}
+.cbtn.on-out{border-color:#AFA9EC;color:var(--purple);background:var(--purple-light)}
+.cbtn-done{border-color:#9FE1CB;color:var(--green-dark)}
+.cbtn-done:hover{background:var(--green-light)}
+.cbtn-new{border-color:#92BAF0;color:#0C447C;background:#D0E4FA}
+.cbtn-new:hover{background:#92BAF0}
+
+/* Upload zone */
+.upload-zone{background:var(--surface);border:2px dashed var(--border);border-radius:var(--radius);padding:52px 24px;text-align:center;cursor:pointer;margin-bottom:14px;transition:background 0.1s,border-color 0.1s}
+.upload-zone:hover{background:var(--bg)}
+.upload-zone.drag-over{background:var(--green-light);border-color:var(--green)}
+.uz-icon{font-size:40px;color:var(--border-strong);display:block;margin-bottom:10px}
+.uz-title{font-size:15px;font-weight:600;margin-bottom:5px}
+.uz-sub{font-size:13px;color:var(--text-muted)}
+
+/* Empty lane */
+.empty-lane{font-size:13px;color:var(--text-faint);padding:10px 16px;font-style:italic}
+
+/* Completed */
+.comp-table{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.comp-row{display:grid;grid-template-columns:100px 1fr 80px 90px 110px 80px;gap:12px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--border);font-size:13px}
+.comp-row:last-child{border-bottom:none}
+.comp-row.hdr{background:var(--bg);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)}
+.comp-code{font-weight:600}
+.comp-cust{color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:24px;width:380px;max-width:96vw;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:18px;letter-spacing:-0.01em}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:5px}
+.field input,.field select{width:100%;font-size:13px;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit}
+.field input:focus,.field select:focus{outline:none;border-color:var(--green)}
+.proc-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:5px}
+.proc-row label{font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer;color:var(--text)}
+.two-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--text);color:#fff;border-radius:var(--radius-sm);padding:10px 16px;font-size:13px;font-weight:500;z-index:200;display:none;max-width:280px}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark"><i class="ti ti-list-check"></i></div>
+      <div>
+        <div class="brand-text">Design Queue</div>
+        <div class="brand-sub">Banana Moon Clothing</div>
+      </div>
+    </div>
+    <div class="sync-badge">
+      <span class="sdot" id="sdot"></span>
+      <span id="slbl">Loading…</span>
+    </div>
+    <div class="sync-badge" id="import-badge" style="display:none">
+      <i class="ti ti-file-spreadsheet" style="font-size:12px"></i>
+      <span id="import-lbl">Last import: —</span>
+    </div>
+    <div class="topbar-actions">
+      <select class="who" id="who">
+        <option value="">— I am —</option>
+        <option value="Katherine">Katherine</option>
+        <option value="Sophie">Sophie</option>
+        <option value="Nikki">Nikki</option>
+      </select>
+      <button class="btn" onclick="document.getElementById('xl-in').click()"><i class="ti ti-upload"></i> Import</button>
+      <input type="file" id="xl-in" accept=".xlsx,.xls" style="display:none" onchange="handleImport(event)">
+      <button class="btn" onclick="exportExcel()"><i class="ti ti-table-export"></i> Export</button>
+      <button class="btn btn-primary" onclick="openAdd()"><i class="ti ti-plus"></i> Add job</button>
+      <button class="btn btn-icon" onclick="loadData(true)" title="Refresh"><i class="ti ti-refresh"></i></button>
+      <button class="btn btn-icon" onclick="resetAllData()" title="Clear all data and start fresh" style="color:var(--red)"><i class="ti ti-trash"></i></button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-label">Total</div><div class="stat-val" id="s-tot">0</div></div>
+    <div class="stat"><div class="stat-label">Overdue</div><div class="stat-val" id="s-ovr" style="color:var(--red)">0</div></div>
+    <div class="stat"><div class="stat-label">Due today</div><div class="stat-val" id="s-tod" style="color:var(--amber)">0</div></div>
+    <div class="stat"><div class="stat-label">Fast track</div><div class="stat-val" id="s-ft" style="color:var(--green)">0</div></div>
+    <div class="stat"><div class="stat-label">No Fail</div><div class="stat-val" id="s-nf" style="color:#A32D2D">0</div></div>
+  </div>
+
+  <div class="toolbar">
+    <input type="text" id="fsearch" placeholder="Search code or customer…" oninput="render()">
+    <select id="fproc" onchange="render()">
+      <option value="">All processes</option>
+      <option value="S">Screen</option>
+      <option value="E">Embroidery</option>
+      <option value="V">DTF</option>
+      <option value="D">DTG</option>
+    </select>
+    <select id="fstatus" onchange="render()"><option value="">All statuses</option></select>
+    <label class="chk"><input type="checkbox" id="fft" onchange="render()"> Fast track only</label>
+    <label class="chk"><input type="checkbox" id="fout" onchange="render()"> Show outsourced</label>
+    <button id="check-all-btn" class="btn" onclick="markAllChecked()" style="display:none;border-color:#92BAF0;color:#0C447C;background:#D0E4FA;font-size:12px"><i class="ti ti-checks"></i> Mark all checked</button>
+    <div class="vtabs">
+      <div class="vtab on" onclick="switchView('queue')">Queue</div>
+      <div class="vtab" onclick="switchView('completed')">Completed <span id="comp-cnt" style="font-size:11px;color:var(--text-faint)"></span></div>
+    </div>
+  </div>
+
+  <div id="view-queue">
+    <div id="upload-prompt">
+      <div class="upload-zone" onclick="document.getElementById('xl-in').click()">
+        <i class="ti ti-file-spreadsheet uz-icon"></i>
+        <div class="uz-title">Import today's back office export</div>
+        <div class="uz-sub">Drag and drop your Excel file here, or click to browse. New jobs are added; existing ones update dates only.</div>
+      </div>
+    </div>
+    <div id="lanes"></div>
+  </div>
+
+  <div id="view-completed" style="display:none">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--text-muted)">Showing</span>
+      <select id="comp-month-filter" onchange="renderCompleted()" style="font-size:12px;padding:5px 9px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit"></select>
+      <span id="comp-month-count" style="font-size:12px;color:var(--text-muted)"></span>
+    </div>
+    <div class="comp-table">
+      <div class="comp-row hdr">
+        <span>Order</span><span>Customer</span><span>Proof by</span><span>Completed by</span><span>Archived at</span><span></span>
+      </div>
+      <div id="comp-rows"></div>
+      <div id="comp-empty" style="text-align:center;padding:36px;font-size:13px;color:var(--text-faint);display:none">No completed jobs this month.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Add/Edit modal -->
+<div id="modal" style="display:none" class="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Add job</div>
+    <div class="field"><label>Order code *</label><input id="m-code" placeholder="BM169xxx"></div>
+    <div class="field"><label>Customer *</label><input id="m-cust" placeholder="Customer name"></div>
+    <div class="field"><label>Proof by date *</label><input id="m-proof" type="date"></div>
+    <div class="field"><label>Despatch date</label><input id="m-desp" type="date" onchange="calcProofDate()"></div>
+    <div class="field"><label>Processes</label>
+      <div class="proc-row">
+        <label><input type="checkbox" id="p-s" value="S"> Screen</label>
+        <label><input type="checkbox" id="p-e" value="E"> Embroidery</label>
+        <label><input type="checkbox" id="p-v" value="V"> DTF</label>
+        <label><input type="checkbox" id="p-d" value="D"> DTG</label>
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="field"><label>Quantity</label><input id="m-qty" type="number" min="0" placeholder="0"></div>
+      <div class="field"><label>Priority</label><select id="m-ft" onchange="calcProofDate()"><option value="No">Standard</option><option value="FT3">3 Day Fast Track</option><option value="FT5">5 Day Fast Track</option><option value="FTM">Manual Fast Track</option><option value="NoFail">No Fail</option></select></div>
+      <div class="field"><label>Repeat</label><select id="m-rep"><option value="No">No</option><option value="Yes">Yes</option></select></div>
+    </div>
+    <div class="field"><label>Status</label><select id="m-status"></select></div>
+    <div class="field"><label>Notes</label><input id="m-notes" placeholder="Any notes…"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveJob()">Save job</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ── Config ──────────────────────────────────────────────────────
+// ── Config ──────────────────────────────────────────────────────
+const GAS = 'https://script.google.com/macros/s/AKfycbw5oBwdOOu7ig8m78yYf5TuJRD9la_3GaHhhnbQ7ndyf0gQcT2z6Agh2dPPtLDCPhcQDg/exec';
+
+const STATUSES = ['Ready for Design','Approved','On Hold','To Outsource','Outsourced — Chasing','Outsourced — Returned','Design Verified','MOD Request'];
+const PROC_MAP = {S:'Screen',E:'Emb',V:'DTF',D:'DTG'};
+const LANES = [
+  {id:'overdue', label:'Overdue',    pip:'#E24B4A', titleCol:'#A32D2D', accent:'#E24B4A'},
+  {id:'today',   label:'Due today',  pip:'#EF9F27', titleCol:'#854F0B', accent:'#EF9F27'},
+  {id:'week',    label:'This week',  pip:'#1D9E75', titleCol:'#0F6E56', accent:'#1D9E75'},
+  {id:'upcoming',label:'Upcoming',   pip:'#C8C5BC', titleCol:'#6B6860', accent:'#D3D1C7'},
+];
+
+let laneOpen = {overdue:true, today:true, week:true, upcoming:false};
+let jobs = {};
+let completed = [];
+let currentView = 'queue';
+let saveTimer = null;
+let editCode = null;
+let lastSaved = '';
+
+// ── Sync status ─────────────────────────────────────────────────
+function sync(state, msg) {
+  const d = document.getElementById('sdot');
+  const l = document.getElementById('slbl');
+  d.className = 'sdot' + (state==='busy' ? ' busy' : state==='warn' ? ' warn' : state==='err' ? ' err' : '');
+  l.textContent = msg;
+}
+
+// ── Toast with undo ──────────────────────────────────────────────
+let _undoFn = null;
+function toast(msg, undoFn, ms=4000) {
+  const t = document.getElementById('toast');
+  _undoFn = undoFn || null;
+  t.innerHTML = msg + (undoFn ? ' <span id="tundo" style="color:#9FE1CB;cursor:pointer;text-decoration:underline;margin-left:8px">Undo</span>' : '');
+  t.style.display = 'block';
+  clearTimeout(t._t);
+  t._t = setTimeout(() => { t.style.display='none'; _undoFn=null; }, ms);
+}
+document.addEventListener('click', e => {
+  if (e.target.id === 'tundo' && _undoFn) { _undoFn(); document.getElementById('toast').style.display='none'; _undoFn=null; }
+});
+
+// ── Google Sheets storage ────────────────────────────────────────
+async function gasGet(action) {
+  const r = await fetch(`${GAS}?action=${action}`);
+  return r.json();
+}
+async function gasPost(body) {
+  const r = await fetch(GAS, {method:'POST', body: JSON.stringify(body)});
+  return r.json();
+}
+
+// ── Load data ────────────────────────────────────────────────────
+async function loadData(manual=false) {
+  sync('busy', manual ? 'Refreshing…' : 'Loading…');
+  try {
+    const [jData, cData] = await Promise.all([gasGet('getJobs'), gasGet('getCompleted')]);
+    const newHash = JSON.stringify({jData, cData});
+    if (newHash !== lastSaved) {
+      lastSaved = newHash;
+      if (Array.isArray(jData)) {
+        const incoming = {};
+        jData.forEach(j => { if (j.code) incoming[j.code] = j; });
+        if (Object.keys(jobs).length === 0) {
+          jobs = incoming;
+        } else {
+          Object.keys(incoming).forEach(code => { if (!jobs[code]) jobs[code] = incoming[code]; });
+        }
+      }
+      if (Array.isArray(cData)) completed = cData;
+    }
+    sync('ok', 'Synced ' + new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
+    if (Object.keys(jobs).length) document.getElementById('upload-prompt').style.display = 'none';
+    populateStatusFilter();
+    render();
+    updateImportBadge();
+    if (manual) toast('Up to date');
+  } catch(e) {
+    sync('err', 'Sync failed');
+    if (manual) toast('Could not reach Google Sheets — check your connection');
+  }
+}
+
+// ── Save data ────────────────────────────────────────────────────
+async function pushJobs() {
+  sync('busy', 'Saving…');
+  try {
+    await gasPost({action:'saveJobs', jobs: Object.values(jobs)});
+    sync('ok', 'Saved ' + new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
+    lastSaved = '';
+  } catch(e) { sync('err', 'Save failed'); }
+}
+async function pushCompleted() {
+  try { await gasPost({action:'saveCompleted', completed}); lastSaved=''; } catch(e) {}
+}
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    sync('busy', 'Saving…');
+    try {
+      await Promise.all([
+        gasPost({action:'saveJobs', jobs: Object.values(jobs)}),
+        gasPost({action:'saveCompleted', completed})
+      ]);
+      lastSaved = '';
+      sync('ok', 'Saved ' + new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
+    } catch(e) { sync('err', 'Save failed'); }
+  }, 1200);
+}
+
+// ── Date helpers ─────────────────────────────────────────────────
+function parseDate(s) {
+  if (!s) return null;
+  if (s instanceof Date && !isNaN(s)) return new Date(s.getFullYear(), s.getMonth(), s.getDate());
+  let m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return new Date(+m[1], +m[2]-1, +m[3]);
+  m = String(s).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if (m) { let y=+m[3]; if(y<100) y+=2000; return new Date(y,+m[2]-1,+m[1]); }
+  const d = new Date(s); return isNaN(d) ? null : d;
+}
+function fmtDate(s) {
+  const d = parseDate(s); if (!d) return s || '';
+  return d.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'2-digit'});
+}
+function toInputDate(s) {
+  const d = parseDate(s); if (!d) return '';
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+// ── Lane logic ───────────────────────────────────────────────────
+function laneFor(j) {
+  const d = parseDate(j.proofBy);
+  const today = new Date(); today.setHours(0,0,0,0);
+  if (!d) return 'upcoming';
+  const dd = new Date(d); dd.setHours(0,0,0,0);
+  const diff = Math.round((dd - today) / 86400000);
+  if (diff < 0) return 'overdue';
+  if (diff === 0) return 'today';
+  if (diff <= 7) return 'week';
+  return 'upcoming';
+}
+function dateClass(j) {
+  const l = laneFor(j);
+  return l==='overdue' ? 'overdue' : l==='today' ? 'today' : l==='week' ? 'soon' : '';
+}
+const PROC_CLASSES = {Screen:'pill-screen', Emb:'pill-emb', DTF:'pill-dtf', DTG:'pill-dtg'};
+function decodeProc(p) {
+  if (!p) return [];
+  return [...new Set(String(p).split(''))].map(c => PROC_MAP[c] || c).filter(Boolean);
+}
+
+// Production time helpers
+function timeToMins(t) {
+  if (!t) return 0;
+  // Excel serial time (fraction of a day, e.g. 0.5 = 12 hours)
+  if (typeof t === 'number') return Math.round(t * 24 * 60);
+  const s = String(t).trim();
+  if (!s || s === '00:00') return 0;
+  // HH:MM format
+  const hm = s.match(/^(\d+):(\d{2})$/);
+  if (hm) return parseInt(hm[1]) * 60 + parseInt(hm[2]);
+  return 0;
+}
+function totalMins(j) {
+  return timeToMins(j.screenTime) + timeToMins(j.embTime) + timeToMins(j.vinylTime) + timeToMins(j.dtgTime);
+}
+function fmtMins(m) {
+  if (!m) return null;
+  const h = Math.floor(m / 60), mins = m % 60;
+  if (h === 0) return `${mins}m`;
+  if (mins === 0) return `${h}h`;
+  return `${h}h ${mins}m`;
+}
+function isFT(j)  { return j.fastTrack==='FT3'||j.fastTrack==='FT5'||j.fastTrack==='FTM'||j.fastTrack===true||j.fastTrack==='true'||j.fastTrack==='Yes'; }
+function isNF(j)  { return j.fastTrack==='NoFail'; }
+function ftLabel(j) {
+  if (j.fastTrack==='FT3') return '3 Day FT';
+  if (j.fastTrack==='FT5') return '5 Day FT';
+  if (j.fastTrack==='FTM') return 'Fast Track';
+  if (j.fastTrack===true||j.fastTrack==='true'||j.fastTrack==='Yes') return 'Fast Track';
+  return 'Fast Track';
+}
+
+// Subtract N working days (Mon–Fri) from a date
+function subWorkingDays(date, days) {
+  const d = new Date(date);
+  let rem = days;
+  while (rem > 0) {
+    d.setDate(d.getDate() - 1);
+    if (d.getDay() !== 0 && d.getDay() !== 6) rem--;
+  }
+  return d;
+}
+
+// Calculate proof by date from despatch + priority
+function calcProofFromDespatch(despatchStr, priority) {
+  const d = parseDate(despatchStr);
+  if (!d) return '';
+  if (priority === 'FT3' || priority === 'FT5' || priority === 'FTM') {
+    return subWorkingDays(d, 2);
+  }
+  // Standard and No Fail: 7 calendar days before despatch
+  const r = new Date(d);
+  r.setDate(r.getDate() - 7);
+  return r;
+}
+
+// Called when despatch date or priority changes in the modal
+function calcProofDate() {
+  const despatch = document.getElementById('m-desp').value;
+  const priority = document.getElementById('m-ft').value;
+  if (!despatch) return;
+  const calc = calcProofFromDespatch(despatch, priority);
+  if (!calc) return;
+  document.getElementById('m-proof').value = toInputDate(calc);
+}
+function isOut(j) { return j.outsourced===true||j.outsourced==='true'; }
+function isRep(j) { return j.repeat===true||j.repeat==='true'||j.repeat==='Yes'; }
+
+// ── Filter / status ──────────────────────────────────────────────
+function populateStatusFilter() {
+  const sel = document.getElementById('fstatus');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All statuses</option>';
+  const used = [...new Set(Object.values(jobs).map(j=>j.status).filter(Boolean))].sort();
+  used.forEach(s => { const o=document.createElement('option'); o.value=s; o.textContent=s; sel.appendChild(o); });
+  sel.value = cur;
+  const ms = document.getElementById('m-status');
+  if (ms) { ms.innerHTML=''; STATUSES.forEach(s => { const o=document.createElement('option'); o.value=s; o.textContent=s; ms.appendChild(o); }); }
+}
+
+function getFiltered() {
+  const q  = document.getElementById('fsearch').value.toLowerCase();
+  const fp = document.getElementById('fproc').value;
+  const fs = document.getElementById('fstatus').value;
+  const ff = document.getElementById('fft').checked;
+  const fo = document.getElementById('fout').checked;
+  return Object.values(jobs).filter(j => {
+    if (!fo && isOut(j)) return false;
+    if (q && !j.code.toLowerCase().includes(q) && !(j.customer||'').toLowerCase().includes(q)) return false;
+    if (fp && !String(j.processes||'').includes(fp)) return false;
+    if (fs && j.status !== fs) return false;
+    if (ff && !isFT(j)) return false;
+    return true;
+  }).sort((a,b) => {
+    const da = parseDate(a.proofBy) || new Date('9999-12-31');
+    const db = parseDate(b.proofBy) || new Date('9999-12-31');
+    const ftRank = j => j.fastTrack==='FT3'?4:j.fastTrack==='FT5'?3:j.fastTrack==='FTM'||(j.fastTrack===true||j.fastTrack==='true'||j.fastTrack==='Yes')?2:j.fastTrack==='NoFail'?1:0;
+    return da-db || ftRank(b)-ftRank(a) || totalMins(b)-totalMins(a);
+  });
+}
+
+// ── Stats ────────────────────────────────────────────────────────
+function updateStats() {
+  const all = Object.values(jobs);
+  document.getElementById('s-tot').textContent = all.length;
+  document.getElementById('s-ovr').textContent = all.filter(j=>laneFor(j)==='overdue').length;
+  document.getElementById('s-tod').textContent = all.filter(j=>laneFor(j)==='today').length;
+  document.getElementById('s-ft').textContent  = all.filter(isFT).length;
+  document.getElementById('s-nf').textContent  = all.filter(isNF).length;
+  const newCount = Object.values(jobs).filter(j=>j.unchecked===true||j.unchecked==='true').length;
+  const checkBtn = document.getElementById('check-all-btn');
+  if (checkBtn) {
+    checkBtn.style.display = newCount > 0 ? '' : 'none';
+    checkBtn.innerHTML = `<i class="ti ti-checks"></i> Mark all checked (${newCount})`;
+  }
+  const currentMonthKey = monthKey(new Date());
+  const currentMonthCount = completed.filter(j => monthKey(new Date(j.completedAt||0)) === currentMonthKey).length;
+  document.getElementById('comp-cnt').textContent = `(${currentMonthCount} this month)`;
+}
+
+// ── Render ───────────────────────────────────────────────────────
+function render() {
+  updateStats();
+  if (currentView === 'queue') renderQueue();
+  else renderCompleted();
+}
+
+function renderQueue() {
+  const list = getFiltered();
+  const container = document.getElementById('lanes');
+  const grouped = {overdue:[],today:[],week:[],upcoming:[]};
+  list.forEach(j => grouped[laneFor(j)].push(j));
+  container.innerHTML = LANES.map(lane => {
+    const items = grouped[lane.id];
+    const open = laneOpen[lane.id];
+    return `<div class="lane">
+      <div class="lane-hdr" onclick="toggleLane('${lane.id}')">
+        <span class="lane-pip" style="background:${lane.pip}"></span>
+        <span class="lane-title" style="color:${lane.titleCol}">${lane.label}</span>
+        <span class="lane-count">${items.length} job${items.length!==1?'s':''}</span>
+        <span class="lane-rule"></span>
+        <span class="lane-tog">${open?'collapse':'expand'}</span>
+      </div>
+      ${open ? `<div>${items.length ? items.map(j=>jobCard(j,lane)).join('') : '<div class="empty-lane">No jobs here</div>'}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function jobCard(j, lane) {
+  const ft = isFT(j), out = isOut(j), rep = isRep(j), nf = isNF(j);
+  const returned = j.status === 'Outsourced — Returned';
+  const isNew = j.unchecked===true||j.unchecked==='true';
+  const procs = decodeProc(j.processes).map(p=>`<span class="pill pill-proc ${PROC_CLASSES[p]||''}">${p}</span>`).join('');
+  const dc = dateClass(j);
+  const statusOpts = STATUSES.map(s=>`<option value="${s}"${j.status===s?' selected':''}>${s}</option>`).join('');
+  const ftClass = j.fastTrack==='FT3'?'ft3':j.fastTrack==='FT5'?'ft5':j.fastTrack==='FTM'||(j.fastTrack===true||j.fastTrack==='true'||j.fastTrack==='Yes')?'ftm':'';
+  const accentColor = returned ? '#7F77DD' : lane.accent;
+  return `<div class="job-card${isNew?' is-new':ftClass?' is-'+ftClass:nf?' is-nf':returned?' is-returned':''}">
+    <div class="job-accent" style="background:${accentColor}"></div>
+    <div class="job-body">
+      <div class="job-r1">
+        <span class="job-code">${j.code}</span>
+        <span class="job-cust">${j.customer||''}</span>
+        ${isNew ? '<span class="pill pill-new"><i class="ti ti-sparkles"></i> New</span>' : ''}
+        ${ft  ? `<span class="pill pill-${ftClass}"><i class="ti ti-bolt"></i> ${ftLabel(j)}</span>` : ''}
+        ${nf  ? '<span class="pill pill-nf"><i class="ti ti-alert-triangle"></i> No Fail</span>' : ''}
+        ${rep ? '<span class="pill pill-rep"><i class="ti ti-repeat"></i> Repeat</span>' : ''}
+        ${out ? '<span class="pill pill-out"><i class="ti ti-external-link"></i> Outsourced</span>' : ''}
+        ${procs}
+        ${j.qty ? `<span style="font-size:12px;color:var(--text-muted)">× ${j.qty}</span>` : ''}
+      </div>
+      <div class="job-r2">
+        <span class="meta">Proof by <span class="dval ${dc}">${fmtDate(j.proofBy)}</span></span>
+        ${j.despatch ? `<span class="meta">Despatch <span class="dval">${fmtDate(j.despatch)}</span></span>` : ''}
+        ${fmtMins(totalMins(j)) ? `<span class="meta prod-time"><i class="ti ti-clock" style="font-size:11px"></i> ${fmtMins(totalMins(j))} production</span>` : ''}
+      </div>
+      ${j.notes ? `<div class="job-note-display">${j.notes}</div>` : ''}
+    </div>
+    <div class="job-ctrl">
+      <select class="ssel" onchange="setField('${j.code}','status',this.value)">
+        <option value="">— status —</option>${statusOpts}
+      </select>
+      <input class="ninp" value="${(j.notes||'').replace(/"/g,'&quot;')}" placeholder="Add a note…"
+        onblur="setField('${j.code}','notes',this.value)"
+        onkeydown="if(event.key==='Enter')this.blur()">
+      <div class="cbtns">
+        <button class="cbtn${rep?' on-rep':''}" onclick="toggle('${j.code}','repeat')">${rep?'✓ Repeat':'Repeat'}</button>
+        <button class="cbtn${out?' on-out':''}" onclick="toggle('${j.code}','outsourced')">${out?'✓ Outsourced':'Outsource'}</button>
+        <button class="cbtn" onclick="openEdit('${j.code}')" title="Edit"><i class="ti ti-edit"></i></button>
+        <button class="cbtn${isNew?' cbtn-new':''}" onclick="markChecked('${j.code}')" title="Mark as checked">${isNew?'✓ Checked':''}</button>
+        <button class="cbtn cbtn-done" onclick="markDone('${j.code}')">✓ Done</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleLane(id) { laneOpen[id] = !laneOpen[id]; render(); }
+
+function setField(code, field, val) {
+  if (!jobs[code]) return;
+  jobs[code][field] = val;
+  if (field === 'status') populateStatusFilter();
+  render();
+  scheduleSave();
+}
+
+function toggle(code, field) {
+  if (!jobs[code]) return;
+  const cur = jobs[code][field];
+  jobs[code][field] = !(cur===true||cur==='true'||cur==='Yes');
+  render();
+  scheduleSave();
+}
+
+async function markDone(code) {
+  const me = document.getElementById('who').value;
+  const snap = {...jobs[code]};
+  completed.unshift({...jobs[code], completedBy:me||'', completedAt:new Date().toISOString()});
+  delete jobs[code];
+  populateStatusFilter(); render(); scheduleSave();
+  toast(code + ' archived', () => {
+    jobs[code] = snap; completed.shift();
+    populateStatusFilter(); render(); scheduleSave();
+    toast(code + ' restored');
+  });
+}
+
+// ── Add / Edit modal ─────────────────────────────────────────────
+function openAdd() {
+  editCode = null;
+  document.getElementById('modal-title').textContent = 'Add job';
+  ['m-code','m-cust','m-proof','m-desp','m-qty','m-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('m-ft').value = 'No';
+  document.getElementById('m-rep').value = 'No';
+  ['p-s','p-e','p-v','p-d'].forEach(id=>document.getElementById(id).checked=false);
+  populateStatusFilter();
+  document.getElementById('m-status').value = 'Ready for Design';
+  document.getElementById('modal').style.display = 'flex';
+  setTimeout(()=>document.getElementById('m-code').focus(), 50);
+}
+
+function openEdit(code) {
+  const j = jobs[code]; if (!j) return;
+  editCode = code;
+  document.getElementById('modal-title').textContent = 'Edit job';
+  document.getElementById('m-code').value = j.code || '';
+  document.getElementById('m-cust').value = j.customer || '';
+  document.getElementById('m-proof').value = toInputDate(j.proofBy);
+  document.getElementById('m-desp').value = toInputDate(j.despatch);
+  document.getElementById('m-qty').value = j.qty || '';
+  const ftVal = j.fastTrack;
+  let ftSel = 'No';
+  if (ftVal==='FT3') ftSel='FT3';
+  else if (ftVal==='FT5') ftSel='FT5';
+  else if (ftVal==='FTM') ftSel='FTM';
+  else if (ftVal==='NoFail') ftSel='NoFail';
+  else if (ftVal===true||ftVal==='true'||ftVal==='Yes') ftSel='FTM';
+  document.getElementById('m-ft').value = ftSel;
+  document.getElementById('m-rep').value = isRep(j) ? 'Yes' : 'No';
+  document.getElementById('m-notes').value = j.notes || '';
+  const procs = String(j.processes || '');
+  ['s','e','v','d'].forEach(c => document.getElementById('p-'+c).checked = procs.includes(c.toUpperCase()));
+  populateStatusFilter();
+  document.getElementById('m-status').value = j.status || '';
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+function saveJob() {
+  const code  = document.getElementById('m-code').value.trim();
+  const cust  = document.getElementById('m-cust').value.trim();
+  const proof = document.getElementById('m-proof').value;
+  if (!code || !cust || !proof) { toast('Code, customer and proof by date are required'); return; }
+  const procs = ['p-s','p-e','p-v','p-d'].filter(id=>document.getElementById(id).checked).map(id=>document.getElementById(id).value).join('');
+  const existing = editCode ? jobs[editCode] : {};
+  const job = {
+    ...existing, code, customer:cust, proofBy:proof,
+    despatch: document.getElementById('m-desp').value,
+    qty:      document.getElementById('m-qty').value,
+    fastTrack: document.getElementById('m-ft').value,
+    repeat:    document.getElementById('m-rep').value === 'Yes',
+    processes: procs,
+    status:    document.getElementById('m-status').value,
+    notes:     document.getElementById('m-notes').value,
+    addedAt:   existing.addedAt || new Date().toISOString(),
+  };
+  if (editCode && editCode !== code) delete jobs[editCode];
+  jobs[code] = job;
+  closeModal();
+  populateStatusFilter();
+  render();
+  scheduleSave();
+  toast(editCode ? `${code} updated` : `${code} added`);
+}
+
+// ── Import Excel ─────────────────────────────────────────────────
+function handleImport(ev) {
+  const file = ev.target.files[0]; if (!file) return;
+  processImportFile(file);
+  ev.target.value = '';
+}
+
+function processImportFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array',cellDates:true});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+    let added=0, updated=0, skippedCompleted=0;
+    const importTime = new Date().toISOString();
+    const completedCodes = new Set(completed.map(j => j.code));
+    rows.forEach(row => {
+      const code = String(row['Code']||row['code']||'').trim();
+      if (!code) return;
+      // Never re-add a job that's already been archived as Done — it stays
+      // gone unless someone deliberately restores it from Completed
+      if (!jobs[code] && completedCodes.has(code)) { skippedCompleted++; return; }
+      // The back office status filter only controls whether a NEW job gets
+      // added — once a job is already on the board, keep its dates updating
+      // even if its back office status has since moved on (e.g. to "Proofs ready")
+      const boStatus = String(row['Status']||row['status']||'').trim().toLowerCase();
+      const alreadyOnBoard = !!jobs[code];
+      const allowedNewStatuses = ['ready for design', 'design verified'];
+      if (!alreadyOnBoard && boStatus && !allowedNewStatuses.includes(boStatus)) return;
+      const ftRaw = String(row['Fast Track']||row['FastTrack']||'').toLowerCase();
+      const isFastTrack = ftRaw==='yes'||ftRaw==='true'||ftRaw==='1';
+      // Parse dates carefully — back office uses DD/MM/YYYY text format,
+      // but guard against genuine Excel date cells shifting a day due to timezone
+      function parseImportDate(val) {
+        if (!val) return null;
+        if (val instanceof Date) {
+          // XLSX builds Date objects using UTC components — re-read using
+          // UTC getters and rebuild as a local date to avoid timezone shift
+          return new Date(val.getUTCFullYear(), val.getUTCMonth(), val.getUTCDate());
+        }
+        const s = String(val).trim();
+        // DD/MM/YYYY or DD/MM/YY
+        const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+        if (m) { let y=+m[3]; if(y<100)y+=2000; return new Date(y,+m[2]-1,+m[1]); }
+        return new Date(val);
+      }
+      const despatchDate = parseImportDate(row['Despatch']);
+      // Determine FT type from despatch gap if fast track
+      let ftType = 'No';
+      if (isFastTrack && despatchDate) {
+        const today = new Date(); today.setHours(0,0,0,0);
+        const gap = Math.round((despatchDate - today) / 86400000);
+        if (gap <= 3) ftType = 'FT3';
+        else if (gap <= 5) ftType = 'FT5';
+        else ftType = 'FTM';
+      } else if (isFastTrack) {
+        ftType = 'FTM';
+      }
+      // Calculate proof by date from despatch
+      // Always calculate proof by from despatch using our rules
+      const proofByVal = despatchDate ? toInputDate(calcProofFromDespatch(despatchDate, ftType)) : (row['Proof By'] ? fmtDate(parseImportDate(row['Proof By'])) : '');
+      const fresh = {
+        code,
+        customer: String(row['Customer']||''),
+        despatch: despatchDate ? fmtDate(despatchDate) : '',
+        proofBy:  proofByVal,
+        processes:String(row['Processes']||''),
+        qty:      row['Quantity']||row['Qty']||'',
+        net:      row['Net']||'',
+        fastTrack:ftType,
+        screenTime: row['Screen']||'',
+        embTime:    row['Embroidery']||'',
+        vinylTime:  row['Vinyl']||'',
+        dtgTime:    row['DTG']||'',
+      };
+      if (jobs[code]) {
+        Object.assign(jobs[code], {despatch:fresh.despatch, proofBy:fresh.proofBy, fastTrack:fresh.fastTrack, customer:fresh.customer, qty:fresh.qty, processes:fresh.processes, screenTime:fresh.screenTime, embTime:fresh.embTime, vinylTime:fresh.vinylTime, dtgTime:fresh.dtgTime, lastImportAt:importTime});
+        updated++;
+      } else {
+        const initialStatus = boStatus === 'design verified' ? 'Design Verified' : 'Ready for Design';
+        jobs[code] = {...fresh, status:initialStatus, outsourced:false, repeat:false, notes:'', unchecked:true, addedAt:new Date().toISOString(), lastImportAt:importTime};
+        added++;
+      }
+    });
+    document.getElementById('upload-prompt').style.display = 'none';
+    populateStatusFilter(); render(); updateImportBadge(); scheduleSave();
+    toast(`${added} new, ${updated} updated${skippedCompleted ? `, ${skippedCompleted} already completed (skipped)` : ''}`);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── Completed view ───────────────────────────────────────────────
+function monthKey(date) {
+  const d = new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function monthLabel(key) {
+  const [y, m] = key.split('-');
+  return new Date(+y, +m-1, 1).toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+}
+
+function populateMonthFilter() {
+  const sel = document.getElementById('comp-month-filter');
+  const cur = sel.value;
+  const keys = [...new Set(completed.map(j => monthKey(new Date(j.completedAt||0))))].sort().reverse();
+  const currentMK = monthKey(new Date());
+  if (!keys.includes(currentMK)) keys.unshift(currentMK);
+  sel.innerHTML = keys.map(k => `<option value="${k}">${monthLabel(k)}${k===currentMK?' (this month)':''}</option>`).join('');
+  sel.value = keys.includes(cur) ? cur : currentMK;
+}
+
+function renderCompleted() {
+  populateMonthFilter();
+  const sel = document.getElementById('comp-month-filter');
+  const selectedMonth = sel.value;
+  const filtered = completed.filter(j => monthKey(new Date(j.completedAt||0)) === selectedMonth);
+  const el = document.getElementById('comp-rows');
+  const countEl = document.getElementById('comp-month-count');
+  countEl.textContent = `— ${filtered.length} job${filtered.length!==1?'s':''}`;
+  if (!filtered.length) {
+    document.getElementById('comp-empty').style.display='';
+    el.innerHTML='';
+    return;
+  }
+  document.getElementById('comp-empty').style.display = 'none';
+  el.innerHTML = filtered.map((j) => {
+    const idx = completed.indexOf(j);
+    const at = j.completedAt ? new Date(j.completedAt).toLocaleString('en-GB',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+    return `<div class="comp-row">
+      <span class="comp-code">${j.code}</span>
+      <span class="comp-cust">${j.customer||''}</span>
+      <span style="color:var(--text-muted)">${fmtDate(j.proofBy)}</span>
+      <span style="color:var(--text-muted)">${j.completedBy||''}</span>
+      <span style="color:var(--text-faint);font-size:12px">${at}</span>
+      <span><button class="cbtn" onclick="restoreJob(${idx})" title="Restore to queue" style="font-size:11px"><i class="ti ti-arrow-back-up"></i> Restore</button></span>
+    </div>`;
+  }).join('');
+}
+
+async function restoreJob(idx) {
+  const j = completed[idx]; if (!j) return;
+  jobs[j.code] = {...j};
+  delete jobs[j.code].completedBy; delete jobs[j.code].completedAt;
+  completed.splice(idx, 1);
+  populateStatusFilter(); render(); scheduleSave();
+  toast(j.code + ' restored');
+}
+
+function switchView(v) {
+  currentView = v;
+  document.querySelectorAll('.vtab').forEach((t,i)=>t.classList.toggle('on',['queue','completed'][i]===v));
+  document.getElementById('view-queue').style.display = v==='queue' ? '' : 'none';
+  document.getElementById('view-completed').style.display = v==='completed' ? '' : 'none';
+  render();
+}
+
+document.getElementById('who').addEventListener('change', render);
+document.addEventListener('keydown', e => { if (e.key==='Escape') closeModal(); });
+
+// ── Drag and drop import ──────────────────────────────────────────
+function initDragDrop() {
+  const zone = document.querySelector('.upload-zone');
+  if (!zone) return;
+  ['dragenter','dragover'].forEach(evt => {
+    zone.addEventListener(evt, e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  });
+  ['dragleave','dragend'].forEach(evt => {
+    zone.addEventListener(evt, () => zone.classList.remove('drag-over'));
+  });
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
+      processImportFile(file);
+    } else {
+      toast('Please drop an Excel file (.xlsx or .xls)');
+    }
+  });
+  // Also support drag-drop anywhere on page when board is visible
+  document.addEventListener('dragover', e => e.preventDefault());
+  document.addEventListener('drop', e => {
+    e.preventDefault();
+    if (e.target.closest('.upload-zone')) return; // handled above
+    const file = e.dataTransfer.files[0];
+    if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
+      processImportFile(file);
+    }
+  });
+}
+
+// ── Export to Excel ───────────────────────────────────────────────
+function exportExcel() {
+  const list = getFiltered();
+  if (!list.length) { toast('Nothing visible to export'); return; }
+
+  const ftDisplay = j => {
+    if (j.fastTrack==='FT3') return '3 Day Fast Track';
+    if (j.fastTrack==='FT5') return '5 Day Fast Track';
+    if (j.fastTrack==='FTM') return 'Manual Fast Track';
+    if (j.fastTrack==='NoFail') return 'No Fail';
+    return '';
+  };
+
+  const rows = list.map(j => ({
+    'Order Code':    j.code,
+    'Customer':      j.customer || '',
+    'Proof By':      fmtDate(j.proofBy),
+    'Despatch':      fmtDate(j.despatch),
+    'Processes':     decodeProc(j.processes).join(', '),
+    'Qty':           j.qty || '',
+    'Priority':      ftDisplay(j),
+    'Status':        j.status || '',
+    'Repeat':        (j.repeat===true||j.repeat==='true') ? 'Yes' : '',
+    'Outsourced':    (j.outsourced===true||j.outsourced==='true') ? 'Yes' : '',
+    'Production':    fmtMins(totalMins(j)) || '',
+    'Notes':         j.notes || '',
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+
+  // Column widths
+  ws['!cols'] = [
+    {wch:12},{wch:28},{wch:11},{wch:11},{wch:18},{wch:5},
+    {wch:18},{wch:22},{wch:7},{wch:10},{wch:12},{wch:35}
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Design Queue');
+
+  const date = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'2-digit'}).replace(/\//g,'-');
+  XLSX.writeFile(wb, `Design Queue ${date}.xlsx`);
+  toast('Exported successfully');
+}
+
+function markChecked(code) {
+  if (!jobs[code]) return;
+  jobs[code].unchecked = false;
+  jobs[code].status = 'Ready for Design';
+  populateStatusFilter();
+  render();
+  scheduleSave();
+}
+
+function markAllChecked() {
+  const newCount = Object.values(jobs).filter(j=>j.unchecked===true||j.unchecked==='true').length;
+  if (!newCount) { toast('No new jobs to mark as checked'); return; }
+  Object.values(jobs).forEach(j => { if (j.unchecked===true||j.unchecked==='true') { j.unchecked=false; j.status='Ready for Design'; } });
+  populateStatusFilter();
+  render();
+  scheduleSave();
+  toast(`${newCount} job${newCount!==1?'s':''} marked as checked`);
+}
+
+async function resetAllData() {
+  const typed = prompt('This will permanently clear ALL jobs and completed records for everyone. Type DELETE to confirm.');
+  if (typed !== 'DELETE') { toast('Reset cancelled'); return; }
+  jobs = {};
+  completed = [];
+  document.getElementById('upload-prompt').style.display = '';
+  populateStatusFilter();
+  render();
+  updateImportBadge();
+  sync('busy', 'Clearing…');
+  try {
+    await Promise.all([pushJobs(), pushCompleted()]);
+    toast('All data cleared — ready for a fresh import');
+  } catch(e) { sync('err', 'Save failed'); }
+}
+
+// ── Import badge ──────────────────────────────────────────────────
+function updateImportBadge() {
+  const badge = document.getElementById('import-badge');
+  const lbl = document.getElementById('import-lbl');
+  const ts = Object.values(jobs).map(j=>j.lastImportAt).filter(Boolean).sort().pop();
+  if (!ts) { badge.style.display='none'; return; }
+  const d = new Date(ts);
+  const date = d.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'2-digit'});
+  const time = d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  lbl.textContent = `Imported ${date} ${time}`;
+  badge.style.display='flex';
+}
+
+// ── Boot ─────────────────────────────────────────────────────────
+loadData();
+setInterval(() => loadData(), 60000);
+initDragDrop();
+</script>
+</body>
+</html>
